@@ -58,19 +58,19 @@ const singUp = async (req, res) => {
 };
 const userLogin = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, mobile, password } = req.body;
 
-    if (!email || !password) {
-      req.status(400).json({
+    if ((!email && !mobile) || !password) {
+      return res.status(400).json({
         msg: "Invalid User",
         status: "failed",
       });
-      return;
     }
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ $or: [{ email }, { mobile }] });
+
     if (!user) {
-      res.status(401).json({
+      return res.status(401).json({
         message: "Login not successful",
         error: "User not found",
       });
@@ -80,21 +80,24 @@ const userLogin = async (req, res) => {
     const isCorrectPassword = await bcrypt.compare(password, hashPasswords);
 
     if (!isCorrectPassword) {
-      res.status(401).json({ status: "Failed", msg: "Unauthorized User" });
+      return res
+        .status(401)
+        .json({ status: "Failed", msg: "Unauthorized User" });
     } else {
-      res.status(200).json({
+      return res.status(200).json({
         message: "Login successful",
         data: {
           user: {
             name: user.name,
             email: user.email,
+            mobile: user.mobile,
           },
           token: generateJWTToken(user),
         },
       });
     }
   } catch (error) {
-    res.status(400).json({
+    return res.status(400).json({
       message: "An error occurred",
       error: error.message,
     });
